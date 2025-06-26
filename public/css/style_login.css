@@ -1,0 +1,12 @@
+.login-body {
+      background-image: url('../images/background-img.jpg');
+    }
+    .login-card {
+      background-color: #0075BB;
+      border-radius: 15px;
+      padding: 2rem;
+      box-shadow: 0 8px 20px rgba(234, 225, 225, 0.2);
+    
+    }
+  
+  
