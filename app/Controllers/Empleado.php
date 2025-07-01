@@ -9,6 +9,7 @@ use App\Models\Subcategoria;
 use App\Models\UsuarioModel;
 use CodeIgniter\HTTP\ResponseInterface;
 use App\Models\ComentarioModel;
+use App\Models\CategoriaModel;
 
 /**
  * Controlador para la gestión de tickets por parte del empleado.
@@ -64,8 +65,8 @@ class Empleado extends BaseController
             'DESCRIPCION'     => $this->request->getPost('DESCRIPCION'),
             'USUARIO_ID'      => $usuario_id,
             'CATEGORIA_ID'    => $this->request->getPost('CATEGORIA_ID'),
-            'SUBCATEGORIA_ID' => $this->request->getPost('SUBCATEGORIA_ID'),
-            'DEPENDENCIA_ID'  => $dependencia_final,
+            'SUBCATEGORIA_ID' => $this->request->getPost('SUBCATEGORIA_ID') !== '' ? $this->request->getPost('SUBCATEGORIA_ID') : null,
+            'DEPENDENCIA_ID'  => $dependencia_final !== '' ? $dependencia_final : null,
             'PRIORIDAD'       => $this->request->getPost('PRIORIDAD'),
             'ESTADO'          => 'ABIERTO'
         ];
@@ -84,21 +85,23 @@ class Empleado extends BaseController
 
         // Manejo de archivo adjunto (si se subió)
         $archivo = $this->request->getFile('archivo');
+
         if ($archivo && $archivo->isValid() && !$archivo->hasMoved()) {
+            log_message('debug', 'Archivo válido para mover: ' . $archivo->getName());
             $nombreArchivo = $archivo->getName();
             $ruta = WRITEPATH . 'uploads/' . $nombreArchivo;
 
-            // Creo el directorio si no existe
             if (!is_dir(WRITEPATH . 'uploads')) {
                 mkdir(WRITEPATH . 'uploads', 0755, true);
             }
 
             $archivo->move(WRITEPATH . 'uploads', $nombreArchivo);
 
-            // Guardo el archivo en la tabla ARCHIVOS
-            $db = \Config\Database::connect();
-
-            try {
+            if (!file_exists($ruta)) {
+                log_message('error', 'El archivo no se movió correctamente: ' . $ruta);
+            } else {
+                log_message('debug', 'Archivo movido correctamente: ' . $ruta);
+                $db = \Config\Database::connect();
                 $sql = "INSERT INTO ARCHIVOS (
                     TICKET_ID, 
                     USUARIO_ID, 
@@ -106,20 +109,88 @@ class Empleado extends BaseController
                     RUTA_ARCHIVO, 
                     TAMANO, 
                     UPLOADED_AT
-                ) VALUES (?, ?, ?, ?, ?, SYSDATE)";
+                ) VALUES (?, ?, ?, ?, ?, SYSTIMESTAMP)";
 
-                $db->query($sql, [
+                $result = $db->query($sql, [
                     $ticketId,
                     $usuario_id,
                     $nombreArchivo,
                     $ruta,
                     $archivo->getSize()
                 ]);
-            } catch (\Exception $e) {
-                log_message('error', 'Error al guardar archivo: ' . $e->getMessage());
-                // Si falla el archivo, no detengo el ticket
+
+                if (!$result) {
+                    log_message('error', 'No se insertó el archivo en la base de datos: ' . print_r($db->error(), true));
+                } else {
+                    log_message('debug', 'Archivo insertado en la base de datos');
+                }
             }
+        } else {
+            log_message('error', 'Archivo no válido o ya movido: ' . print_r($archivo, true));
         }
+
+        // 1. Obtener datos del encargado de la categoría
+        $categoria_id = $this->request->getPost('CATEGORIA_ID');
+        $categoriaModel = new CategoriaModel();
+        $categoria = $categoriaModel->find($categoria_id);
+
+        $encargado_id = $categoria['ENCARAGADO_ID'];
+
+        $usuarioModel = new UsuarioModel();
+        $encargado = $usuarioModel->find($encargado_id);
+        $correoEncargado = $encargado['EMAIL'];
+
+        // 2. Obtener datos del usuario que creó el ticket
+        $usuario = $usuarioModel->find($usuario_id);
+
+        // 3. Preparar y enviar el correo
+        $email = \Config\Services::email();
+        $email->setTo($correoEncargado);
+        $email->setSubject('Nuevo ticket creado en tu categoría');
+
+        $mensaje = "
+            <h2>Nuevo Ticket Creado</h2>
+            <p><strong>Título:</strong> {$data['TITULO']}</p>
+            <p><strong>Descripción:</strong> {$data['DESCRIPCION']}</p>
+            <p><strong>Prioridad:</strong> {$data['PRIORIDAD']}</p>
+            <hr>
+            <h3>Datos del usuario que emitió el ticket:</h3>
+            <p><strong>Nombre:</strong> {$usuario['NOMBRE']}</p>
+            <p><strong>Email:</strong> {$usuario['EMAIL']}</p>
+        ";
+        $email->attach('uploads/' . $nombreArchivo);
+        $email->setMessage($mensaje);
+        $email->setMailType('html');
+
+        $enviado = $email->send() ? 'S' : 'N';
+
+        // $notificacionModel = new \App\Models\NotificacionModel();
+        // $notificacionModel->insert([
+        //     'USUARIO_ID' => $encargado_id,
+        //     'TICKET_ID' => $ticketId,
+        //     'TIPO' => 'EMAIL',
+        //     'ASUNTO' => 'Nuevo ticket creado en tu categoría',
+        //     'MENSAJE' => $mensaje,
+        //     'ENVIADO' => $enviado,
+        //     'SENT_AT' => $enviado === 'S' ? date('Y-m-d H:i:s') : null,
+        //     'CREATED_AT' => date('Y-m-d H:i:s')
+        // ]);
+        // Insertar notificación en la base de datos
+        $db = \Config\Database::connect();
+        $sql = "INSERT INTO NOTIFICACIONES (
+            USUARIO_ID, TICKET_ID, TIPO, ASUNTO, MENSAJE, ENVIADO, SENT_AT, CREATED_AT
+        ) VALUES (?, ?, ?, ?, ?, ?, TO_DATE(?, 'YYYY-MM-DD HH24:MI:SS'), TO_DATE(?, 'YYYY-MM-DD HH24:MI:SS'))";
+
+        $db->query($sql, [
+            $encargado_id,
+            $ticketId,
+            'EMAIL',
+            'Nuevo ticket creado en tu categoría',
+            $mensaje,
+            $enviado,
+            $enviado === 'S' ? date('Y-m-d H:i:s') : null,
+            date('Y-m-d H:i:s')
+        ]);
 
         return redirect()->to('empleado/inicio_empleado')->with('mensaje', 'Ticket creado correctamente');
     }
@@ -163,16 +234,13 @@ class Empleado extends BaseController
         $ticket = $query->getRowArray();
 
         if (!$ticket) {
-            // Si no existe el ticket, redirijo con error
             return redirect()->to('/mis_tickets')->with('error', 'Ticket no encontrado');
         }
 
-        // Si la descripción es un objeto OCILob, la convierto a string
+        // Conversión de OCILob y fechas
         if (is_object($ticket['DESCRIPCION']) && get_class($ticket['DESCRIPCION']) === 'OCILob') {
             $ticket['DESCRIPCION'] = $ticket['DESCRIPCION']->load();
         }
-
-        // Si la fecha de creación es un objeto, la convierto a string
         if (isset($ticket['FECHA_CREACION']) && is_object($ticket['FECHA_CREACION'])) {
             if (method_exists($ticket['FECHA_CREACION'], 'format')) {
                 $ticket['FECHA_CREACION'] = $ticket['FECHA_CREACION']->format('Y-m-d H:i:s');
@@ -182,10 +250,9 @@ class Empleado extends BaseController
         }
 
         // Obtener comentarios del ticket
-        $comentarioModel = new \App\Models\ComentarioModel();
+        $comentarioModel = new ComentarioModel();
         $comentarios = $comentarioModel->getComentariosPorTicket($id, true);
 
-        // Convertir OCILob a string si es necesario
         foreach ($comentarios as &$comentario) {
             if (is_object($comentario['CONTENIDO']) && get_class($comentario['CONTENIDO']) === 'OCILob') {
                 $comentario['CONTENIDO'] = $comentario['CONTENIDO']->load();
@@ -193,11 +260,45 @@ class Empleado extends BaseController
         }
         unset($comentario);
 
-        // Retorna la vista con los detalles del ticket y comentarios
+        // Obtener archivos adjuntos del ticket
+        $archivos = $db->query("SELECT * FROM ARCHIVOS WHERE TICKET_ID = ?", [$id])->getResultArray();
+
+        // Retorna la vista con los detalles del ticket, comentarios y archivos
         return view('empleado/ver_ticket', [
             'ticket' => $ticket,
             'CATEGORIA_ID' => $ticket['CATEGORIA_ID'],
-            'comentarios' => $comentarios
+            'comentarios' => $comentarios,
+            'archivos' => $archivos
         ]);
+    }
+
+    public function descargarArchivo($nombreArchivo)
+    {
+        $ruta = WRITEPATH . 'uploads/' . $nombreArchivo;
+
+        if (!is_file($ruta)) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound("Archivo no encontrado");
+        }
+
+        // Alternativa: Detectar MIME por extensión
+        $extension = strtolower(pathinfo($ruta, PATHINFO_EXTENSION));
+        $mimes = [
+            'jpg'  => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'png'  => 'image/png',
+            'gif'  => 'image/gif',
+            'pdf'  => 'application/pdf',
+            // agrega más si lo necesitas
+        ];
+        $mime = $mimes[$extension] ?? 'application/octet-stream';
+
+        if (str_starts_with($mime, 'image/') || $mime === 'application/pdf') {
+            return $this->response
+                ->setHeader('Content-Type', $mime)
+                ->setHeader('Content-Disposition', 'inline; filename="' . $nombreArchivo . '"')
+                ->setBody(file_get_contents($ruta));
+        }
+
+        return $this->response->download($ruta, null);
     }
 }

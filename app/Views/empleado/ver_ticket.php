@@ -115,9 +115,23 @@
                         </div>
                     </div>
                 </div>
+                <?php if (isset($archivos) && count($archivos) > 0): ?>
+                    <div class="mt-3 p-3 rounded-3 bg-light border">
+                        <strong>Archivos adjuntos:</strong>
+                        <div class="d-flex flex-wrap gap-2 mt-2">
+                            <?php foreach ($archivos as $archivo): ?>
+                                <a href="<?= base_url('descargar/archivo/' . $archivo['NOMBRE_ARCHIVO']) ?>"
+                                   class="btn btn-outline-primary btn-sm"
+                                   title="Descargar o ver archivo">
+                                    <i class="fas fa-paperclip"></i> <?= esc($archivo['NOMBRE_ARCHIVO']) ?>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
     </div>
 </section>
 
-<?php echo $this->endSection(); ?> 
+<?php echo $this->endSection(); ?>

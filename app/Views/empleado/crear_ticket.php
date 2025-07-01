@@ -14,7 +14,7 @@
                         </h2>
                     </div>
                     <div class="card-body p-4">
-                        <form method="post" action="<?= isset($ticket) ? site_url('actualizar_ticket/' . $ticket['ID']) : site_url('tickets/empleado/guardar') ?>" enctype="multipart/form-data">
+                        <form method="post" action="<?= isset($ticket) ? site_url('empleado/actualizar_ticket/' . $ticket['ID']) : site_url('empleado/guardar_ticket_empleado') ?>" enctype="multipart/form-data">
                             <input type="hidden" name="USUARIO_ID" value="<?= esc($id_usuario ?? ($ticket['USUARIO_ID'] ?? '')) ?>">
                             <div class="row g-4">
                                 <div class="mb-3 col-md-6">

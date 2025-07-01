@@ -157,14 +157,22 @@ class TicketModel extends Model
             $callbackData = $this->setDefaults($callbackData);
             $data = $callbackData['data'];
 
-            // --- CORRECCIÓN: Normalizar DEPENDENCIA_ID ---
+            // Normalizar SUBCATEGORIA_ID
+            $subcategoria_id = $data['SUBCATEGORIA_ID'] ?? null;
+            if ($subcategoria_id === '' || $subcategoria_id === null) {
+                $subcategoria_id = null;
+            } else {
+                $subcategoria_id = (int)$subcategoria_id;
+            }
+
+            // Normalizar DEPENDENCIA_ID
             $dependencia_id = $data['DEPENDENCIA_ID'] ?? null;
             if ($dependencia_id === '' || $dependencia_id === null) {
                 $dependencia_id = null;
             } else {
                 $dependencia_id = (int)$dependencia_id;
             }
-        
+
             // Preparar la consulta con SYSDATE para fechas
             $sql = "INSERT INTO TICKETS (
                         TITULO, 
@@ -184,15 +192,17 @@ class TicketModel extends Model
                 $data['DESCRIPCION'],
                 $data['USUARIO_ID'],
                 $data['CATEGORIA_ID'],
-                $data['SUBCATEGORIA_ID'] ?? null,
+                $subcategoria_id,
                 $dependencia_id,
                 $data['PRIORIDAD'],
                 $data['ESTADO']
             ]);
 
             if ($result) {
-                // Obtener el ID insertado
-                $insertId = $db->insertID();
+                // Para Oracle: obtener el último ID insertado usando la secuencia
+                $query = $db->query("SELECT TICKETS_SEQ.CURRVAL AS ID FROM dual");
+                $row = $query->getRow();
+                $insertId = $row->ID ?? null;
                 return $insertId;
             }
 

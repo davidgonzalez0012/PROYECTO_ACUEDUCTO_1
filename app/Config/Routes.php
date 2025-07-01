@@ -14,14 +14,16 @@ $routes->get('/login', 'Home::logout');
 $routes->group('', ['filter' => 'auth:EMPLEADO'], function($routes) {
     //rutas para contrlador de empleado
     $routes->get('/inicio_empleado', 'Home::index_empleado');
+    $routes->get('empleado/inicio_empleado', 'Home::index_empleado');
     $routes->get('/crear_ticket', 'Empleado::crear_ticket_empleado');
-    $routes->post('tickets/empleado/guardar', 'Empleado::guardar_ticket_empleado');
+    $routes->post('empleado/guardar_ticket_empleado', 'Empleado::guardar_ticket_empleado');
     $routes->get('/mis_tickets', 'Empleado::tickets_realizados_empleado');
     $routes->get('/ver_ticket/(:num)', 'Empleado::ver_ticket_empleado/$1');
     $routes->get('/editar_ticket/(:num)', 'Editar::editar_ticket_empleado/$1');
-    $routes->post('actualizar_ticket/(:num)', 'Editar::actualizar_ticket_empleado/$1');
+    $routes->post('empleado/actualizar_ticket/(:num)', 'Editar::actualizar_ticket/$1');
     $routes->get('tickets/ver/(:num)', 'Empleado::ver_ticket_empleado/$1');
     $routes->post('tickets/comentar/(:num)', 'Comentario::comentar/$1');
+    $routes->get('descargar/archivo/(:any)', 'Empleado::descargarArchivo/$1');
 });
 
 $routes->group('', ['filter' => 'auth:SOPORTE'], function($routes) {

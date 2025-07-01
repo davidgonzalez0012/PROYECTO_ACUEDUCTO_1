@@ -19,6 +19,7 @@ class Dependencia extends Controller
     {
         $model = new DependenciaModel();
         $data['dependencias'] = $model->findAll();
+        // dd($data);
         return view('administrador/lista_dependencias', $data);
     }
 

@@ -50,32 +50,64 @@ class Editar extends BaseController
     }
 
     /**
-     * Actualiza los datos de un ticket editado por el empleado.
-     * Solo actualiza los campos que han cambiado.
+     * Actualiza los datos de un ticket de empleado.
+     * @param int $id El ID del ticket a actualizar.
      */
-    public function actualizar_ticket_empleado($id)
-    {
-        $ticketModel = new TicketModel();
+public function actualizar_ticket($id)
+{
+    $ticketModel = new TicketModel();
+    $session = session();
+    $usuario_id = $session->get('id');
 
-        $data = [
-            'TITULO'          => $this->request->getPost('TITULO'),
-            'DESCRIPCION'     => $this->request->getPost('DESCRIPCION'),
-            'CATEGORIA_ID'    => $this->request->getPost('CATEGORIA_ID'),
-            'SUBCATEGORIA_ID' => $this->request->getPost('SUBCATEGORIA_ID'),
-            'DEPENDENCIA_ID'  => $this->request->getPost('DEPENDENCIA_ID'),
-            'PRIORIDAD'       => $this->request->getPost('PRIORIDAD'),
-            'ESTADO'          => $this->request->getPost('ESTADO')
-        ];
+    // Obtén los datos del formulario
+    $data = [
+        'TITULO'          => $this->request->getPost('TITULO'),
+        'DESCRIPCION'     => $this->request->getPost('DESCRIPCION'),
+        'CATEGORIA_ID'    => $this->request->getPost('CATEGORIA_ID'),
+        'SUBCATEGORIA_ID' => $this->request->getPost('SUBCATEGORIA_ID'),
+        'DEPENDENCIA_ID'  => $this->request->getPost('DEPENDENCIA_ID'),
+        'PRIORIDAD'       => $this->request->getPost('PRIORIDAD'),
+        'ESTADO'          => $this->request->getPost('ESTADO')
+    ];
 
-        // Quito los valores vacíos para no sobreescribir con null
-        $data = array_filter($data, function ($value) {
-            return $value !== null && $value !== '';
-        });
+    // Actualiza el ticket
+    $ticketModel->update($id, $data);
 
-        if ($ticketModel->actualizarTicket($id, $data)) {
-            return redirect()->to('/tickets/ver/' . $id)->with('mensaje', 'Ticket actualizado correctamente');
-        } else {
-            return redirect()->back()->with('error', 'Error al actualizar el ticket')->withInput();
+    // Manejo de archivo adjunto (si se subió uno nuevo)
+    $archivo = $this->request->getFile('archivo');
+    if ($archivo && $archivo->isValid() && !$archivo->hasMoved()) {
+        $nombreArchivo = $archivo->getName();
+        $ruta = WRITEPATH . 'uploads/' . $nombreArchivo;
+
+        if (!is_dir(WRITEPATH . 'uploads')) {
+            mkdir(WRITEPATH . 'uploads', 0755, true);
+        }
+
+        $archivo->move(WRITEPATH . 'uploads', $nombreArchivo);
+
+        if (file_exists($ruta)) {
+            // Inserta el nuevo archivo en la tabla ARCHIVOS
+            $db = \Config\Database::connect();
+            $sql = "INSERT INTO ARCHIVOS (
+                TICKET_ID, 
+                USUARIO_ID, 
+                NOMBRE_ARCHIVO, 
+                RUTA_ARCHIVO, 
+                TAMANO, 
+                UPLOADED_AT
+            ) VALUES (?, ?, ?, ?, ?, SYSTIMESTAMP)";
+
+            $db->query($sql, [
+                $id,
+                $usuario_id,
+                $nombreArchivo,
+                $ruta,
+                $archivo->getSize()
+            ]);
         }
     }
+
+    return redirect()->to('/mis_tickets')->with('mensaje', 'Ticket actualizado correctamente');
+
+}
 }
