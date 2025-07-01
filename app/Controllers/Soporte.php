@@ -9,6 +9,7 @@ use App\Models\Subcategoria;
 use App\Models\UsuarioModel;
 use CodeIgniter\HTTP\ResponseInterface;
 use App\Models\ComentarioModel;
+use ZipArchive;
 
 /**
  * Controlador para la gestión de tickets por parte del soporte.
@@ -60,10 +61,14 @@ class Soporte extends BaseController
         }
         unset($comentario);
 
+        // Obtener archivos adjuntos del ticket
+        $archivos = $db->query("SELECT ID, NOMBRE_ARCHIVO, RUTA_ARCHIVO FROM ARCHIVOS WHERE TICKET_ID = ?", [$id])->getResultArray();
+
         return view('soporte/ver_datalles_ticket', [
             'ticket' => $ticket,
             'CATEGORIA_ID' => $ticket['CATEGORIA_ID'],
-            'comentarios' => $comentarios
+            'comentarios' => $comentarios,
+            'archivos' => $archivos // <-- pasa los archivos a la vista
         ]);
     }
 
@@ -91,5 +96,52 @@ class Soporte extends BaseController
         } else {
             return redirect()->back()->with('error', 'Error al actualizar el estado del ticket');
         }
+    }
+
+    /**
+     * Descarga todos los archivos adjuntos de un ticket en un archivo ZIP.
+     */
+    public function descargar_archivos_ticket($ticket_id)
+    {
+        $db = \Config\Database::connect();
+        $archivos = $db->query("SELECT NOMBRE_ARCHIVO, RUTA_ARCHIVO FROM ARCHIVOS WHERE TICKET_ID = ?", [$ticket_id])->getResultArray();
+
+        if (empty($archivos)) {
+            return redirect()->back()->with('error', 'No hay archivos para este ticket.');
+        }
+
+        $zip = new ZipArchive();
+        $zipName = "archivos_ticket_$ticket_id.zip";
+        $zipPath = WRITEPATH . 'uploads/' . $zipName;
+
+        if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+            return redirect()->back()->with('error', 'No se pudo crear el archivo ZIP.');
+        }
+
+        foreach ($archivos as $archivo) {
+            if (file_exists($archivo['RUTA_ARCHIVO'])) {
+                $zip->addFile($archivo['RUTA_ARCHIVO'], $archivo['NOMBRE_ARCHIVO']);
+            }
+        }
+        $zip->close();
+
+        return $this->response->download($zipPath, null)->setFileName($zipName);
+    }
+
+    public function mostrar_archivo($nombreArchivo)
+    {
+        $ruta = WRITEPATH . 'uploads/' . $nombreArchivo;
+        if (!file_exists($ruta)) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound("Archivo no encontrado");
+        }
+
+        // Detecta el tipo MIME (más compatible)
+        $mime = mime_content_type($ruta);
+
+        // Devuelve el archivo para visualizar en el navegador
+        return $this->response
+            ->setHeader('Content-Type', $mime)
+            ->setHeader('Content-Disposition', 'inline; filename="' . $nombreArchivo . '"')
+            ->setBody(file_get_contents($ruta));
     }
 }

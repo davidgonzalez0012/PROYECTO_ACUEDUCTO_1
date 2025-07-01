@@ -40,6 +40,8 @@ $routes->group('', ['filter' => 'auth:SOPORTE'], function($routes) {
     $routes->get('/dependencias_soporte/(:num)', 'Dependencia::mostrarDependencia_soporte/$1');
     $routes->get('/dependencias_soporte/usuarios/(:num)', 'Dependencia::usuariosPorDependencia_soporte/$1');
     $routes->post('tickets/comentar_Soporte/(:num)', 'Comentario::comentar/$1');
+    $routes->get('soporte/descargar_archivos_ticket/(:num)', 'Soporte::descargar_archivos_ticket/$1');
+    $routes->get('soporte/mostrar_archivo/(:any)', 'Soporte::mostrar_archivo/$1');
 });
 
 $routes->group('', ['filter' => 'auth:ADMIN'], function($routes) {

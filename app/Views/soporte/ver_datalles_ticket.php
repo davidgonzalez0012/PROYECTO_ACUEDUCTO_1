@@ -131,9 +131,40 @@
                         </div>
                     </div>
                 </div>
+                <!-- Sección de Archivos Adjuntos -->
+                <div class="row g-4 mt-4">
+                    <div class="col-12">
+                        <div class="card shadow-lg border-0 rounded-4">
+                            <div class="card-header bg-info text-white rounded-top-4 border-0">
+                                <h5 class="mb-0">Archivos Adjuntos</h5>
+                            </div>
+                            <div class="card-body p-4">
+                                <?php if (isset($archivos) && count($archivos) > 0): ?>
+                                    <ul class="list-unstyled">
+                                        <?php foreach ($archivos as $archivo): ?>
+                                            <li class="mb-2">
+                                                <a href="<?= base_url('soporte/mostrar_archivo/' . $archivo['NOMBRE_ARCHIVO']) ?>" target="_blank" class="text-decoration-none">
+                                                    <i class="fas fa-file-alt me-2"></i>
+                                                    <?= esc($archivo['NOMBRE_ARCHIVO']) ?>
+                                                </a>
+                                            </li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                    <a href="<?= site_url('soporte/descargar_archivos_ticket/' . $ticket['ID']) ?>" class="btn btn-primary">
+                                        <i class="fas fa-download"></i> Descargar todos en ZIP
+                                    </a>
+                                <?php else: ?>
+                                    <div class="alert alert-info text-center">
+                                        No hay archivos adjuntos para este ticket.
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </section>
 
-<?php echo $this->endSection(); ?> 
+<?php echo $this->endSection(); ?>
