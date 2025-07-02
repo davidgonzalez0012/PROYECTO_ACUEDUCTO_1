@@ -42,6 +42,7 @@ $routes->group('', ['filter' => 'auth:SOPORTE'], function($routes) {
     $routes->post('tickets/comentar_Soporte/(:num)', 'Comentario::comentar/$1');
     $routes->get('soporte/descargar_archivos_ticket/(:num)', 'Soporte::descargar_archivos_ticket/$1');
     $routes->get('soporte/mostrar_archivo/(:any)', 'Soporte::mostrar_archivo/$1');
+    $routes->get('tickets/asignados_categoria/soporte', 'Soporte::asignadosCategoriaSoporte');
 });
 
 $routes->group('', ['filter' => 'auth:ADMIN'], function($routes) {

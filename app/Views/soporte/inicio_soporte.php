@@ -62,6 +62,18 @@
                 </a>
             </div>
         </div>
+        <!-- Tickets Asignados por Categoría -->
+        <div class="col-12 col-md-3">
+            <div class="card glass-card border-0 h-100">
+                <a href="<?= base_url('tickets/asignados_categoria/soporte') ?>" class="text-decoration-none">
+                    <div class="card-body text-center p-4">
+                        <i class="fas fa-user-tag fa-2x text-info mb-3"></i>
+                        <h3 class="fw-bold mb-2"><?= isset($asignadosCategoria) ? esc($asignadosCategoria) : '0' ?></h3>
+                        <p class="text-muted mb-0"> Tus Tickets Asignados por Categoría</p>
+                    </div>
+                </a>
+            </div>
+        </div>
     </div>
     <!-- Recent Tickets -->
     <div class="row">

@@ -386,4 +386,44 @@ class TicketModel extends Model
         $query = $db->query($sql, [$usuario_id, $limit]);
         return $query->getResultArray();
     }
+
+    /**
+     * Obtiene el total de tickets asignados a usuarios (no null).
+     * @return int Total de tickets asignados
+     */
+ public function getTotalAsignadosPorCategoria($encargado_id)
+{
+    $db = \Config\Database::connect();
+    $sql = "
+        SELECT COUNT(*) AS TOTAL
+        FROM TICKETS T
+        JOIN CATEGORIAS C ON C.ID = T.CATEGORIA_ID
+        WHERE C.ENCARAGADO_ID = ?
+    ";
+    $query = $db->query($sql, [$encargado_id]);
+    $row = $query->getRowArray();
+   
+  return $row ? $row['TOTAL'] : 0;
+    }
+
+    /**
+     * Obtiene todos los tickets asignados a una categoría específica, con información detallada.
+     * @param int $encargado_id ID del encargado de la categoría
+     * @return array Lista de tickets asignados a la categoría
+     */
+    public function getTicketsAsignadosPorCategoria($encargado_id)
+    {
+        $db = \Config\Database::connect();
+        $sql = "
+            SELECT T.ID, T.TITULO, T.ESTADO, T.PRIORIDAD, 
+                   TO_CHAR(T.FECHA_CREACION, 'YYYY-MM-DD HH24:MI:SS') AS FECHA_CREACION, 
+                   T.DESCRIPCION, T.CATEGORIA_ID, C.NOMBRE AS CATEGORIA_NOMBRE
+            FROM TICKETS T
+            JOIN CATEGORIAS C ON C.ID = T.CATEGORIA_ID
+            WHERE C.ENCARAGADO_ID = ?
+            ORDER BY T.FECHA_CREACION DESC
+        ";
+        $query = $db->query($sql, [$encargado_id]);
+        return $query->getResultArray();
+    }
 }

@@ -156,6 +156,5 @@ class Ticket extends BaseController
         ]);
     }
 
-  
 
 }

@@ -144,4 +144,17 @@ class Soporte extends BaseController
             ->setHeader('Content-Disposition', 'inline; filename="' . $nombreArchivo . '"')
             ->setBody(file_get_contents($ruta));
     }
+
+
+    public function asignadosCategoriaSoporte()
+    {
+        $encargado_id = session()->get('id'); // Ajusta según tu sesión
+        $ticketModel = new \App\Models\TicketModel();
+        $tickets = $ticketModel->getTicketsAsignadosPorCategoria($encargado_id); // Debes crear este método si quieres mostrar el listado
+        return view('soporte/tickets_asignados_categoria', ['tickets' => $tickets]);
+    }
+
+
+
+
 }

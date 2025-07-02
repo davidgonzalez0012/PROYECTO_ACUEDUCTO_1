@@ -117,16 +117,21 @@ class Home extends BaseController
         $hardwarePct_soporte = $total ? round(($hardware / $total) * 100) : 0;
         $softwarePct_soporte = $total ? round(($software / $total) * 100) : 0;
         $redesPct_soporte = $total ? round(($redes / $total) * 100) : 0;
-        return view('soporte/inicio_soporte', [
-            'recientes'      => $recientes,
-            'hardwarePct_soporte'    => $hardwarePct_soporte,
-            'softwarePct_soporte'    => $softwarePct_soporte,
-            'redesPct_soporte'       => $redesPct_soporte,
-            'totalTickets'   => $total,
-            'resueltosHoy'   => $resueltosHoy,
-            'cerradosTotal'  => $cerradosTotal,
-            'altaPrioridad'  => $altaPrioridad,
-        ]);
+
+        $data['recientes'] = $recientes;
+        $data['hardwarePct_soporte'] = $hardwarePct_soporte;
+        $data['softwarePct_soporte'] = $softwarePct_soporte;
+        $data['redesPct_soporte'] = $redesPct_soporte;
+        $data['totalTickets'] = $total;
+        $data['resueltosHoy'] = $resueltosHoy;
+        $data['cerradosTotal'] = $cerradosTotal;
+        $data['altaPrioridad'] = $altaPrioridad;
+
+        // Asignados por categoría (nuevo)
+        $encargado_id = session()->get('id'); // O el nombre de tu variable de sesión
+        $data['asignadosCategoria'] = $ticketModel->getTotalAsignadosPorCategoria($encargado_id);
+
+        return view('soporte/inicio_soporte', $data);
     }
 
     /**
